@@ -107,11 +107,12 @@ public class MainActivity extends AppCompatActivity {
         jw.beginObject();
         jw.name("title").value(n.getTitle());
         jw.name("text").value(n.getText());
-        jw.name("lastUpdates").value(n.getDate().getTime());
+        jw.name("lastUpdated").value(n.getDate().getTime());
         jw.endObject();
       }
       jw.endArray();
       jw.close();
+      Toast.makeText(getApplicationContext(),"Saved notes",Toast.LENGTH_SHORT).show();
     } catch (Exception e) {
       e.printStackTrace();
     }

@@ -23,7 +23,7 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteViewHolder> {
   @Override
   public NoteViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
     View noteView = LayoutInflater.from(parent.getContext()).inflate(R.layout.note_list_entry, parent, false);
-    //noteView.setOnClickListener(mainAct);
+   // noteView.setOnClickListener(mainAct);
    // noteView.setOnLongClickListener(mainAct);
 
     return new NoteViewHolder(noteView);
