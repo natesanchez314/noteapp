@@ -4,7 +4,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import java.util.EmptyStackException;
 import java.util.List;
 
 import androidx.annotation.NonNull;
@@ -17,16 +16,15 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteViewHolder> {
 
   NoteAdapter(List<Note> nList, MainActivity ma) {
     this.noteList = nList;
-    this.mainAct = ma;
+    mainAct = ma;
   }
 
   @NonNull
   @Override
   public NoteViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-
     View noteView = LayoutInflater.from(parent.getContext()).inflate(R.layout.note_list_entry, parent, false);
     //noteView.setOnClickListener(mainAct);
-    //noteView.setOnLongClickListener(mainAct);
+   // noteView.setOnLongClickListener(mainAct);
 
     return new NoteViewHolder(noteView);
   }

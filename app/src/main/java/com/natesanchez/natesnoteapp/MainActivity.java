@@ -1,39 +1,50 @@
 package com.natesanchez.natesnoteapp;
 
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
+import android.util.JsonWriter;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
 
-  private final List<Note> notes = new ArrayList<>();
+  private final ArrayList<Note> notes = new ArrayList<>();
   private RecyclerView recView;
+  NoteAdapter noteAdapter;
+  private static final int editRequestCode = 1;
+  private Note passedNote;
+  private int pos;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
-    loadFile();
+    readJSON();
+
     recView = findViewById(R.id.noteRecycler);
-    NoteAdapter noteAdapter = new NoteAdapter(notes, this);
+    noteAdapter = new NoteAdapter(notes, this);
     recView.setAdapter(noteAdapter);
     recView.setLayoutManager(new LinearLayoutManager(this));
-    notes.add(new Note("test1", "sdfdsgdsfgfdsgdf dfsg ds dsg sdfg fdsg "));
-    notes.add(new Note("test2", "sdfdsgds dsf s afd affgfdsgdf dfsg ds dsg sdfg fdsg "));
   }
 
   @Override
@@ -47,41 +58,131 @@ public class MainActivity extends AppCompatActivity {
     switch (item.getItemId()) {
       case R.id.menu_about:
         about();
-        Toast.makeText(getApplicationContext(),"About tapped",Toast.LENGTH_SHORT).show();
         return true;
       case R.id.menu_add:
         addNote();
-        Toast.makeText(getApplicationContext(),"Adding new note!",Toast.LENGTH_SHORT).show();
         return true;
       default:
         return super.onOptionsItemSelected(item);
     }
   }
 
-  private void loadFile() {
-    try {
-      InputStream is = getApplicationContext().openFileInput("noteAppSaveFile");
-      BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
-      StringBuilder sb = new StringBuilder();
+  @Override
+  public void onPause() {
+    writeJSON();
+    super.onPause();
+  }
 
-    } catch (FileNotFoundException e) {
+  private void readJSON() {
+    // get the saved notes from the json file
+    try {
+      FileInputStream fis = getApplicationContext().openFileInput(getString(R.string.note_save_file));
+      byte[] data = new byte[(int) fis.available()];
+      int loaded = fis.read(data);
+      fis.close();
+      String json = new String(data);
+
+      JSONArray notesArray = new JSONArray(json);
+      for (int i = 0; i < notesArray.length(); i++) {
+        JSONObject jObj = notesArray.getJSONObject(i);
+        Note n = new Note(
+                jObj.getString("title"),
+                jObj.getString("text")
+        );
+        n.setDate(jObj.getLong("lastUpdated"));
+        notes.add(n);
+      }
+    } catch (Exception e) {
       e.printStackTrace();
     }
   }
 
-  private void makeFile() {
-
+  private void writeJSON() {
+    try {
+      FileOutputStream fos = getApplicationContext().openFileOutput(getString(R.string.note_save_file), Context.MODE_PRIVATE);
+      JsonWriter jw = new JsonWriter(new OutputStreamWriter(fos, StandardCharsets.UTF_8));
+      jw.setIndent("  ");
+      jw.beginArray();
+      for (Note n : notes) {
+        jw.beginObject();
+        jw.name("title").value(n.getTitle());
+        jw.name("text").value(n.getText());
+        jw.name("lastUpdates").value(n.getDate().getTime());
+        jw.endObject();
+      }
+      jw.endArray();
+      jw.close();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
   }
 
   private void about() {
-
+    // opens the about activity
+    Intent intent = new Intent(getApplicationContext(), AboutActivity.class);
+    startActivity(intent);
   }
 
   private void addNote() {
-
+    // opens the edit activity to make a new note
+    Intent intent = new Intent(this, EditActivity.class);
+    startActivityForResult(intent, editRequestCode);
   }
 
-  private void deleteNote() {
+  @Override
+  protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent in) {
+    super.onActivityResult(requestCode, resultCode, in);
+    if (requestCode == editRequestCode) {
+      if (resultCode == RESULT_OK) {
+        passedNote = (Note) in.getSerializableExtra("NEW_NOTE");
+        passedNote.setDate((long) new Date().getTime());
+        if (in.hasExtra("POS")) {
+          pos = in.getIntExtra("POS", 0);
+          if (!(passedNote.getTitle().equals(notes.get(pos).getTitle())
+                || passedNote.getText().equals(notes.get(pos).getText()))) {
+            deleteNote(pos);
+            notes.add(0, passedNote);
+          }
+        } else {
+          notes.add(0, passedNote);
+        }
+        noteAdapter.notifyDataSetChanged();
+      }
+    }
+  }
 
+  private void deleteNote(int pos) {
+    notes.remove(pos);
+    noteAdapter.notifyDataSetChanged();
+  }
+
+  public void onClick(View v) {
+    pos = recView.getChildLayoutPosition(v);
+    passedNote = notes.get(pos);
+    Intent intent = new Intent(this, EditActivity.class);
+    intent.putExtra("PASSED_NOTE", passedNote);
+    intent.putExtra("POS", pos);
+    startActivityForResult(intent, editRequestCode);
+  }
+
+  public void onLongClick(View v) {
+    pos = recView.getChildLayoutPosition(v);
+    Note n = notes.get(pos);
+    AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    builder.setTitle("Delete note");
+    builder.setMessage("Are you sure you want to delete this note?");
+    builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+      public void onClick(DialogInterface dialogInterface, int i) {
+        deleteNote(pos);
+        Toast.makeText(getApplicationContext(),"Note deleted",Toast.LENGTH_SHORT).show();
+      }
+    });
+    builder.setNegativeButton("No", new DialogInterface.OnClickListener() {
+      public void onClick(DialogInterface dialogInterface, int i) {
+        Toast.makeText(getApplicationContext(),"Cancelled deletion",Toast.LENGTH_SHORT).show();
+      }
+    });
+    AlertDialog dialog = builder.create();
+    dialog.show();
   }
 }
