@@ -1,14 +1,15 @@
 package com.natesanchez.natesnoteapp;
 
+import java.io.Serializable;
 import java.util.Date;
 
-public class Note implements Comparable<Note> {
+public class Note implements Serializable {
 
   private String title;
   private String text;
   private Date lastUpdated;
 
-  public Note(String title, String text) {
+  Note(String title, String text) {
     this.title = title;
     this.text = text;
     lastUpdated = new Date();
@@ -24,7 +25,8 @@ public class Note implements Comparable<Note> {
 
   public void updateText(String newText) { text = newText; }
 
-  @Override
+  public void setDate(long d) { this.lastUpdated = new Date(d); }
+
   public int compareTo(Note otherNote) {
     if (lastUpdated.before(otherNote.getDate())) {
       return -1;
